@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     azure_openai_api_version: str = Field(alias="AZURE_OPENAI_API_VERSION")
     azure_openai_deployment: str = Field(alias="AZURE_OPENAI_DEPLOYMENT")
 
+    # Supabase (optional)
+    supabase_url: str | None = Field(default=None, alias="SUPABASE_URL")
+    supabase_key: str | None = Field(default=None, alias="SUPABASE_SERVICE_ROLE_KEY")
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

@@ -1,44 +1,43 @@
 ## FastCrew: FastAPI + CrewAI (Azure OpenAI)
 
 ### Prerequisites
-- Python 3.11
-- Azure OpenAI resource and a chat model deployment
+- Python 3.11 (3.12 also works)
+- Azure OpenAI deployment
+- Optional: Supabase project (for persistence) and Google Auth in frontend
 
-### Setup (Windows PowerShell)
-1. Create and activate a virtual environment:
+### Setup
+1. Create and activate a virtual environment (PowerShell):
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
-
 2. Install dependencies:
 ```powershell
 pip install -r requirements.txt
 ```
-
-3. Create a `.env` file in the project root with:
+3. Configure environment variables in `.env`:
 ```
-AZURE_OPENAI_API_KEY=your_azure_openai_api_key
-AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com
+AZURE_OPENAI_API_KEY=...
+AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com
 AZURE_OPENAI_API_VERSION=2024-02-15-preview
-AZURE_OPENAI_DEPLOYMENT=your-deployment-name
+AZURE_OPENAI_DEPLOYMENT=<deployment-name>
+# Optional Supabase
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 ```
-
-4. Run the API server:
+4. Run the server:
 ```powershell
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Test the chat endpoint
-```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/chat -ContentType 'application/json' -Body '{"message":"Hello!"}'
-```
+### Auth
+- Pass `Authorization: Bearer <jwt>` header. For local dev, you may pass `X-User-Id: <user-id>` and omit Authorization.
 
-You should receive a JSON response with a `reply` field.
+### Endpoints
+- `POST /chat` -> { message } => { reply }
+- `POST /marketing/research` -> { company, product, target_markets[] } => { user_id, insights }
+- `POST /marketing/plan` -> { company, product, research_insights } => { user_id, plan, score }
+- `POST /marketing/content` -> { company, product, plan, platforms? } => { user_id, content }
 
-### Project structure
-- `app/main.py`: FastAPI app
-- `app/config.py`: Settings and Azure OpenAI config
-- `app/agents.py`: CrewAI agent wrapper
-- `app/routers/chat.py`: Chat API route
+If Supabase is configured, results are stored per-user in tables `marketing_research`, `marketing_plan`, and `marketing_content`.
 
