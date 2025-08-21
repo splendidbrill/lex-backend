@@ -21,6 +21,8 @@ class ResearchRequest(BaseModel):
 class ResearchResponse(BaseModel):
     user_id: str
     insights: str
+    question: str = Field(default="Do you want a business plan for that?")
+    next_action: str = Field(default="POST /marketing/plan/confirm with {\"answer\":\"yes\"}")
 
 
 @router.post("/research", response_model=ResearchResponse)
@@ -65,6 +67,44 @@ async def plan(payload: PlanRequest, x_user_id: Optional[str] = Header(default=N
         "score": result.score,
     })
     return PlanResponse(user_id=user_id, plan=result.plan, score=result.score)
+
+
+class PlanConfirmRequest(BaseModel):
+    answer: str = Field(..., description="yes/no")
+
+
+class PlanConfirmResponse(BaseModel):
+    user_id: str
+    confirmed: bool
+    message: Optional[str] = None
+    plan: Optional[str] = None
+    score: Optional[int] = None
+
+
+@router.post("/plan/confirm", response_model=PlanConfirmResponse)
+async def plan_confirm(payload: PlanConfirmRequest, x_user_id: Optional[str] = Header(default=None)) -> PlanConfirmResponse:
+    user_id = x_user_id or "dev_user"
+    if payload.answer.strip().lower() not in ("yes", "y"): 
+        return PlanConfirmResponse(user_id=user_id, confirmed=False, message="Skipped creating business plan.")
+
+    last = get_latest_artifact("marketing_research", user_id)
+    if not last:
+        raise HTTPException(status_code=400, detail="No saved research found for user.")
+
+    company = str(last.get("company") or "")
+    product = str(last.get("product") or "")
+    research_text = str(last.get("insights") or "")
+    if not company or not product or not research_text:
+        raise HTTPException(status_code=400, detail="Saved research is incomplete. Please run research again.")
+
+    result = create_business_plan_and_score(company, product, research_text)
+    insert_user_artifact("marketing_plan", user_id, {
+        "company": company,
+        "product": product,
+        "plan": result.plan,
+        "score": result.score,
+    })
+    return PlanConfirmResponse(user_id=user_id, confirmed=True, plan=result.plan, score=result.score)
 
 
 class ContentRequest(BaseModel):
